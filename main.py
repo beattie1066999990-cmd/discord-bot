@@ -8,6 +8,7 @@ import os
 
 TOKEN = os.getenv "TOKEN"
 INTENTS = discord.Intents.default()
+
 bot = commands.Bot(command_prefix="!", intents=INTENTS)
 
 OFFSETS_URL = "https://offsets.ntgetwritewatch.workers.dev/offsets.hpp"
@@ -55,3 +56,4 @@ async def offset(interaction: discord.Interaction):
         await interaction.followup.send(msg)
 
 bot.run(TOKEN)
+
