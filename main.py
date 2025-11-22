@@ -2,8 +2,10 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import requests
+import os
+print("All environment variables:", os.environ)
 
-TOKEN = "TOKEN"
+TOKEN = os.getenv("TOKEN")
 INTENTS = discord.Intents.default()
 
 bot = commands.Bot(command_prefix="!", intents=INTENTS)
@@ -47,6 +49,8 @@ async def offset(interaction: discord.Interaction):
     else:
         await interaction.response.send_message(f"```\n{offset_text}\n```")
 
+    print("TOKEN prefix:", TOKEN[:5])
 
 bot.run(TOKEN)
+
 
