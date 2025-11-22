@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import requests
 
-TOKEN = "YOUR_TOKEN_HERE"
+TOKEN = "TOKEN"
 INTENTS = discord.Intents.default()
 
 bot = commands.Bot(command_prefix="!", intents=INTENTS)
@@ -49,3 +49,4 @@ async def offset(interaction: discord.Interaction):
 
 
 bot.run(TOKEN)
+
