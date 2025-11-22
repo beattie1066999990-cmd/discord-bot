@@ -2,58 +2,66 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import requests
-import re
-from io import StringIO
+from math import ceil
 import os
 
 TOKEN = os.getenv "TOKEN"
 INTENTS = discord.Intents.default()
-
 bot = commands.Bot(command_prefix="!", intents=INTENTS)
 
 OFFSETS_URL = "https://offsets.ntgetwritewatch.workers.dev/offsets.hpp"
-OFFSET_RE = re.compile(r"inline constexpr uintptr_t\s+(\w+)\s*=\s*(0x[0-9A-Fa-f]+)")
+offset_text = "Offsets not loaded yet."
 
-async def fetch_offsets():
-    """Fetch offsets and return a dictionary."""
+
+def fetch_raw_offsets():
+    """Downloads the entire offsets.hpp file as raw text."""
     try:
         resp = requests.get(OFFSETS_URL, timeout=10)
         resp.raise_for_status()
-        found = OFFSET_RE.findall(resp.text)
-        return {name: value for name, value in found}
+        return resp.text
     except Exception as e:
-        print("Error fetching offsets:", e)
-        return {}
+        return f"Failed to download offsets:\n{e}"
+
 
 @bot.event
 async def on_ready():
+    global offset_text
+    offset_text = fetch_raw_offsets()
+    print("Offsets fetched.")
     try:
         await bot.tree.sync()
         print("Slash commands synced.")
     except Exception as e:
-        print("Error syncing commands:", e)
-    print("Bot is ready!")
+        print("Sync error:", e)
+    print(f"Bot is ready as {bot.user}")
 
-@bot.tree.command(name="offset", description="Fetch and show current offsets.")
+
+@bot.tree.command(name="offset", description="Paste the latest offsets.hpp file text.")
 async def offset(interaction: discord.Interaction):
-    await interaction.response.defer()  # avoid timeout
-    offsets = await fetch_offsets()
-    
-    if not offsets:
-        await interaction.followup.send("Could not fetch offsets.")
-        return
-    
-    # Prepare the message
-    msg = "\n".join(f"**{name}** = `{value}`" for name, value in offsets.items())
+    global offset_text
 
-    # If too long, send as a file
-    if len(msg) > 1900:
-        buf = StringIO(msg)
-        buf.seek(0)
-        file = discord.File(fp=buf, filename="offsets.txt")
-        await interaction.followup.send("Offsets are too long, sending as file:", file=file)
-    else:
-        await interaction.followup.send(msg)
+    # If short enough, send in code block
+    if len(offset_text) <= 1900:
+        await interaction.response.send_message(f"```\n{offset_text}\n```")
+        return
+
+    # Split into pages of 1900 characters
+    pages = [offset_text[i:i+1900] for i in range(0, len(offset_text), 1900)]
+    total_pages = len(pages)
+
+    # Send first page in an embed
+    embed = discord.Embed(title="Offsets.hpp", description=f"Page 1/{total_pages}", color=0x00ff00)
+    embed.add_field(name="Offsets", value=f"```\n{pages[0]}\n```", inline=False)
+    message = await interaction.response.send_message(embed=embed)
+
+    # If too long, send remaining pages as files
+    if total_pages > 1:
+        from io import StringIO
+        for i, page in enumerate(pages[1:], start=2):
+            buf = StringIO(page)
+            buf.seek(0)
+            file = discord.File(buf, filename=f"offsets_page_{i}.txt")
+            await interaction.followup.send(f"Page {i}/{total_pages}:", file=file)
+
 
 bot.run(TOKEN)
-
