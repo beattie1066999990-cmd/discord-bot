@@ -43,29 +43,18 @@ async def on_ready():
 async def offset(interaction: discord.Interaction):
     global offset_text
 
-    # If short enough, send in code block
+    # Short text → send in code block
     if len(offset_text) <= 1900:
         await interaction.response.send_message(f"```\n{offset_text}\n```")
-        return
-
-    # Split into pages of 1900 characters
-    pages = [offset_text[i:i+1900] for i in range(0, len(offset_text), 1900)]
-    total_pages = len(pages)
-
-    # Send first page in an embed
-    embed = discord.Embed(title="Offsets.hpp", description=f"Page 1/{total_pages}", color=0x00ff00)
-    embed.add_field(name="Offsets", value=f"```\n{pages[0]}\n```", inline=False)
-    message = await interaction.response.send_message(embed=embed)
-
-    # If too long, send remaining pages as files
-    if total_pages > 1:
+    else:
+        # Too long → send as file
         from io import StringIO
-        for i, page in enumerate(pages[1:], start=2):
-            buf = StringIO(page)
-            buf.seek(0)
-            file = discord.File(buf, filename=f"offsets_page_{i}.txt")
-            await interaction.followup.send(f"Page {i}/{total_pages}:", file=file)
+        buf = StringIO(offset_text)
+        buf.seek(0)
+        file = discord.File(buf, filename="offsets.hpp")
+        await interaction.response.send_message("Offsets are too long, sending as file:", file=file)
 
 
 bot.run(TOKEN)
+
 
